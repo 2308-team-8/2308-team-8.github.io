@@ -1,0 +1,237 @@
+body {
+  font-family: 'Poppins', sans-serif;
+}
+
+h1 {
+  font-size: 4.5rem;
+}
+
+h2 {
+  font-size: 2rem;
+}
+
+main > section {
+  margin: 80px auto 100px auto;
+  width: 1000px;
+}
+
+/* ---------------------------------
+
+               nav
+
+------------------------------------ */
+
+nav#site-navigation {
+  position: fixed;
+  top: 0;
+  width: 100vw;
+}
+
+nav#site-navigation ul {
+  display: inline-block;
+  font-size: 1.5rem;
+}
+
+nav#site-navigation ul li {
+  margin: 25px 20px 25px 40px;
+  float: left;
+}
+
+nav#site-navigation p {
+  font-size: 1.2rem;
+}
+
+nav#site-navigation a {
+  text-decoration: none;
+  white-space: nowrap;
+  color: #ffffff;
+}
+
+/* ---------------------------------
+
+               header
+
+------------------------------------ */
+
+header {
+  height: 200vh;
+  background: #284389;
+}
+
+header h1 {
+  font-size: 3rem;
+  line-height: 4rem;
+  padding: 20px 20px;
+}
+
+header p {
+  color: #ffffff;
+  font-size: 2.5rem;
+  font-weight: 200;
+  /* letter-spacing: 0.1rem; */
+  left: 50%;
+  position: absolute;
+  text-align: center;
+  transform: translateY(-50%) translateX(-50%);
+  width: 750px;
+  margin-top: 100px;
+  margin-bottom: 75px;
+  padding-bottom: 20px;
+}
+
+header h1 img {
+  display: block;
+  width: 60%;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* ---------------------------------
+
+            case study
+
+------------------------------------ */
+#case-study {
+  /* margin: 0 auto; */
+
+}
+
+#case-study h2:first-of-type {
+  margin-top: 50px;
+}
+
+#case-study p,
+#case-study ul {
+  margin-bottom: 20px;
+  font-family: 'Noto Serif', serif;
+  font-weight: 300;
+}
+
+#case-study ul ul {
+  margin-bottom: 0px;
+}
+
+#case-study h2 {
+  /* font-family: ; */
+  font-weight: 500;
+  margin: 75px auto 20px auto;
+}
+
+#case-study h2:first-of-type {
+  margin-top: 50px;
+}
+
+#case-study h3,
+#case-study h4,
+#case-study h5 {
+  /* color: var(--color-gander-black); */
+  /* font-family: var(--font-family-header); */
+  margin-top: 75px;
+}
+
+#case-study p {
+  font-size: 1.2rem;
+  line-height: 1.8rem;
+}
+
+#case-study li {
+  font-size: 1.2rem;
+  line-height: 1.8rem;
+  list-style: disc;
+  margin-left: 2rem;
+  margin-bottom: 1rem;
+}
+
+/* ---------------------------------
+
+            our team
+
+------------------------------------ */
+
+#our-team {
+  background-color: #284389;
+  color: #ffffff;
+  margin-top: 100px;
+  padding-bottom: 25px;
+}
+
+#our-team h1 {
+  padding-top: 100px;
+  margin-bottom: 30px;
+  text-align: center;
+  line-height: 4rem;
+}
+
+#our-team > p {
+  font-family: 'Noto Serif', serif;
+  font-weight: 300;
+  font-size: 1.2rem;
+  line-height: 1.7rem;
+  margin-top: 30px;
+  text-align: center;
+  margin: 0 auto;
+  width: 45%;
+}
+
+#our-team > ul {
+  padding: 60px 0 80px;
+  text-align: center;
+}
+
+#our-team li {
+  display: inline-block;
+  margin: 0 3%;
+  width: 15%;
+  vertical-align: top;
+}
+
+#our-team .social-icons li {
+  display: inline-block;
+  margin: 0 3%;
+  width: 15%;
+  vertical-align: top;
+}
+
+#our-team h3 {
+  margin-bottom: 10px;
+}
+
+#our-team a {
+  color: #282828;
+  text-decoration: none;
+}
+
+#our-team a img {
+  cursor: pointer;
+}
+
+#our-team li > img {
+  border-radius: 100%;
+  margin: 0 auto 20px;
+  width: 15vw;
+  max-width: 250px;
+}
+
+
+
+#our-team .individual ul {
+  margin: 0;
+}
+
+#our-team .individual li img {
+  padding: 2px;
+  margin-top: 10px;
+  width: 45px;
+}
+
+#our-team .individual li img:hover {
+  filter: invert(20%);
+}
+
+#our-team .individual li {
+  margin: 10px 10px 0 10px;
+}
+
+#our-team .individual p {
+  font-size: 1rem;
+}

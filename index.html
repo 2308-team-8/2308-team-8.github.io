@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+
+    <link rel="apple-touch-icon" sizes="180x180" href="images/icons/favicons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="images/icons/favicons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="images/icons/favicons/favicon-16x16.png">
+    <link rel="manifest" href="images/icons/favicons/site.webmanifest">
+    <link rel="mask-icon" href="images/icons/favicons/safari-pinned-tab.svg" color="#5bbad5">
+    <link rel="shortcut icon" href="images/icons/favicons/favicon.ico">
+    <meta name="msapplication-TileColor" content="#2b5797">
+    <meta name="msapplication-config" content="images/icons/favicons/browserconfig.xml">
+    <meta name="theme-color" content="#284389">
+    
+    <title>Laridae</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@300;400;800&family=Poppins:wght@100;200;300;500&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="stylesheets/main.css">
+
+    <!-- <style>reset</style> -->
+    <link rel="stylesheet" href="stylesheets/reset.css" />
+
+    <!-- <style></style> -->
+    <link rel="stylesheet" href="stylesheets/main.css" />
+
+    <!-- <script></script> -->
+    <script src="javascripts/index.js"></script>
+  </head>
+  <body>
+  <!-- <div>
+    <p>MENU</p>
+
+    <a href="https://github.com/2308-team-8/laridae" target="_blank">
+      <img src="" alt="github logo" />
+    </a>
+  </div> -->
+  <nav id="site-navigation">
+    <ul>
+      <li>
+        <a href="#home" id="home-link">HOME</a>
+      </li>
+
+      <li>
+        <a href="#case-study" id="case-study-link">CASE STUDY</a>
+      </li>
+
+      <li>
+        <a href="#our-team" id="our-team-link">OUR TEAM</a>
+      </li>
+    </ul>
+  </nav>
+
+  <header id="home">
+    <h1>
+      <img src="images/logos/Laridae_Transparent_Logo.png" alt="Laridae logo" />
+
+      <p>A zero-downtime, reversible database schema migration tool for PostgreSQL</p>
+    </h1>
+  </header>
+
+  <!-- <section>
+    <div>
+      <img src="" alt="demo" />
+    </div>
+
+    <article>
+      <div>
+        <h1>Database Schema Migration Tool</h1>
+      </div>
+    </article>
+  </section> -->
+  <main>
+    <section id="case-study">
+      <h1>Case Study</h1>
+
+      <!-- <div id="side-nav">
+        <a href="#home">
+          <img src="" alt="Laridae logo" />
+        </a>
+      </div> -->
+
+      <!-- <nav>
+        <ul></ul>
+      </nav> -->
+      <h2 id="introduction">1) Introduction</h2>
+      <p>
+        Laridae is a zero-downtime, reversible database schema migration tool for PostgreSQL. 
+        Laridae utilizes GitHub Actions to automate database schema changes and corresponding 
+        application deployments on ECS Fargate. Laridae standardizes a workflow that ensures 
+        the database and application code stay in sync and function normally as schema changes 
+        are executed safely, i.e., reversible.
+      </p>
+      <p>
+        Laridae creates infrastructure for hosting the core Laridae migration tool inside your 
+        own AWS VPC network and fully automates the process of making a schema change to your 
+        private PostgreSQL database and redeploying the application instance configured to utilize 
+        the updated database schema on ECS Fargate.
+      </p>
+        
+      <h2>1.1) Design Goals</h2>
+      <p>
+        Laridae is a tool to automate database schema migrations and simplify the deployment of schema changes. 
+        We designed Laridae with the following goals in mind:
+      </p>
+      <ul>
+        <li>Convenience — The tool should be easy to install and configure.</li>
+        <li>Cost-Efficiency — The user should only incur expenses for the resources used on AWS, with no need for an opaque monthly fee.</li>
+        <li>Control — The tool should rely on the user's cloud infrastructure so the user can maintain control over their data.</li>
+      </ul>
+
+      <h2>1.2) Laridae Features</h2>
+      <p>Laridae users can:</p>
+      <ul>
+        <li>Initialize a GitHub Action workflow to:
+          <ul>
+            <li>Provision all AWS resources to create the infrastructure to host the core Laridae migration tool.</li>
+            <li>Execute the database schema changes in their database.</li>
+            <li>Upon completion of migration changes, redeploy the application instance configured to utilize updated schema changes on ECS Fargate.</li>
+            <li>Tear down all AWS resources used in said infrastructure.</li>
+          </ul>
+        </li>
+        <li>In addition to automating the integration of database schema migrations, Laridaer:
+          <ul>
+            <li>It can be used as a standalone CLI tool, or the CLI tool can be integrated into your own pipeline.</li>
+          </ul>
+        </li>
+      </ul>
+        
+      <h2>1.3) What Laridae Supports</h2>
+      <ul>Currently, Laridae only supports:
+        <li>Applications using a PostgreSQL database.</li>
+        <li>Pipelines where the application code is deployed on ECS Fargate.</li>
+      </ul>
+
+      <section id="footnotes">
+        <h2 id="references">References</h2>
+
+        <ol>
+          <li id="footnote-1"></li>
+        </ol>
+      </section>
+    </section>
+  </main>
+
+  <section id="our-team">
+    <h1>Our Team</h1>
+
+    <p>We are looking for opportunities. If you like our project, feel free to reach out!</p>
+
+    <ul>
+      <li class="individual">
+        <img src="https://avatars.githubusercontent.com/MaiKhuu?v=4" alt="Mai Khuu" />
+
+        <h3>Mai Khuu</h3>
+
+        <p>Indianapolis, IN</p>
+
+        <ul class="social-icons">
+          <li>
+            <a href="mailto:" target="">
+              <img src="images/icons/icons8-email-50.png" alt="email" />
+            </a>
+          </li>
+
+          <li>
+            <a href="" target="_blank">
+              <img src="images/icons/icons8-github-64.png" alt="github" />
+            </a>
+          </li>
+
+          <li>
+            <a href="" target="_blank">
+              <img src="images/icons/icons8-webpage-64.png" alt="website" />
+            </a>
+          </li>
+
+          <li>
+            <a href="https://www.linkedin.com/" target="_blank">
+              <img src="images/icons/icons8-linkedin-50.png" alt="linkedin" />
+            </a>
+          </li>
+        </ul>
+      </li>
+
+      <li class="individual">
+        <img src="https://avatars.githubusercontent.com/closetsolipsist?v=4" alt="James Thompson" />
+
+        <h3>James Thompson</h3>
+
+        <p>Carrboro, NC</p>
+
+        <ul class="social-icons">
+          <li>
+            <a href="mailto:" target="">
+              <img src="images/icons/icons8-email-50.png" alt="email" />
+            </a>
+          </li>
+
+          <li>
+            <a href="" target="_blank">
+              <img src="images/icons/icons8-github-64.png" alt="github" />
+            </a>
+          </li>
+
+          <li>
+            <a href="" target="_blank">
+              <img src="images/icons/icons8-webpage-64.png" alt="website" />
+            </a>
+          </li>
+
+          <li>
+            <a href="https://www.linkedin.com/" target="_blank">
+              <img src="images/icons/icons8-linkedin-50.png" alt="linkedin" />
+            </a>
+          </li>
+        </ul>
+      </li>
+
+      <li class="individual">
+        <img src="https://avatars.githubusercontent.com/stephaniegmalek?v=4" alt="Stephanie McCollom" />
+
+        <h3>Stephanie McCollom</h3>
+
+        <p>Chicago, IL</p>
+
+        <ul class="social-icons">
+          <li>
+            <a href="mailto:" target="">
+              <img src="images/icons/icons8-email-50.png" alt="email" />
+            </a>
+          </li>
+
+          <li>
+            <a href="" target="_blank">
+              <img src="images/icons/icons8-github-64.png" alt="github" />
+            </a>
+          </li>
+
+          <li>
+            <a href="" target="_blank">
+              <img src="images/icons/icons8-webpage-64.png" alt="website" />
+            </a>
+          </li>
+
+          <li>
+            <a href="https://www.linkedin.com/" target="_blank">
+              <img src="images/icons/icons8-linkedin-50.png" alt="linkedin" />
+            </a>
+          </li>
+        </ul>
+      </li>
+
+
+    </ul>
+  </section>
+</body>
+
+</html>
+<!-- <a target="_blank" href="https://icons8.com/icon/12623/email">Email</a> icon by <a target="_blank" href="https://icons8.com">Icons8</a> -->
