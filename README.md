@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="images/logos/Laridae_Transparent_No_Text.png" />
+  <img src="images/logos/Laridae_Transparent_No_Text.png" width="250px"/>
 </p>
 <h2>Laridae: A zero-downtime, reversible database schema migration tool for PostgreSQL</h2>
 
