@@ -1,6 +1,12 @@
 body {
   font-family: 'Poppins', sans-serif;
   background-color: #ffffff;
+  /* width: 100%; */
+  /* display: block; */
+}
+
+main {
+  padding: 0 75px 0 350px;
 }
 
 h1 {
@@ -14,9 +20,20 @@ h2 {
 h3 {
   font-size: 1.5rem;
 }
+
+h4 {
+  font-size: 1.3rem;
+}
+
 main > section {
   margin: 80px auto 100px auto;
-  width: 1000px;
+  width: 75%;
+}
+
+img {
+  display: block;
+  margin: 0 auto;
+  max-width: 800px;
 }
 
 /* ---------------------------------
@@ -32,7 +49,7 @@ main > section {
   display: block; 
   margin-bottom: 10px; 
   cursor: pointer; 
-  z-index: 3;
+  z-index: 4;
   opacity: 1;
   border-radius: 20%;
 }
@@ -147,7 +164,7 @@ nav#site-navigation a {
 ------------------------------------ */
 
 header {
-  height: 200vh;
+  height: 1100px;
   background: #284389;
 }
 
@@ -167,7 +184,7 @@ header p {
   text-align: center;
   transform: translateY(-50%) translateX(-50%);
   width: 750px;
-  margin-top: 100px;
+  margin-top: 75px;
   margin-bottom: 75px;
   padding-bottom: 20px;
 }
@@ -399,10 +416,12 @@ header h1 img {
   #case-study nav {
     display: none;
   }
-  #case-study img.w30 {
+
+  /* #case-study img.w30 {
     max-width: 50vw;
-  }
-  /* nav#case-study-mobile ul {
+  } */
+
+  nav#case-study-mobile ul {
     margin: 0;
   }
 
@@ -412,7 +431,7 @@ header h1 img {
 
   nav#site-navigation #case-study-mobile li:last-child {
     margin-bottom: 0;
-  } */
+  }
 
   main {
     padding: 0 75px;
@@ -747,7 +766,8 @@ header h1 img {
   }
 
   #home p {
-    margin-top: 150px;
+    /* margin-top: 150px; */
+    font-size: 2rem;
   }
 
   #case-study img {
@@ -839,13 +859,13 @@ header h1 img {
     margin-bottom: 3.5vh;
   }
 
-  /* nav#case-study-mobile {
+  nav#case-study-mobile {
     margin-top: 1.75vh;
   }
 
   #case-study img {
     max-width: 65vw;
-  } */
+  }
 
   #our-team {
     padding-bottom: 18px;
@@ -873,7 +893,7 @@ header h1 img {
 
   #home p {
     font-size: 2.5rem;
-    margin-top: 150px;
+    /* margin-top: 150px; */
   }
 }
 
@@ -901,6 +921,6 @@ header h1 img {
 
   #home p {
     font-size: 2rem;
-    margin-top: 175px;
+    /* margin-top: 175px; */
   }
 }

@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
 
     <link rel="apple-touch-icon" sizes="180x180" href="images/icons/favicons/apple-touch-icon.png">
@@ -17,14 +17,16 @@
     
     <title>Laridae</title>
 
+    <!-- <style>reset</style> -->
+    <link rel="stylesheet" href="stylesheets/reset.css" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:wght@300;400;800&family=Poppins:wght@100;200;300;500&display=swap" rel="stylesheet">
 
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
 
-    <!-- <style>reset</style> -->
-    <link rel="stylesheet" href="stylesheets/reset.css" />
+    
 
     <!-- <style></style> -->
     <link rel="stylesheet" href="stylesheets/main.css" />
@@ -34,10 +36,10 @@
   </head>
   <body>
     <div class="logo-links">
-      <div> 
+      <p> 
         <img src="images/logos/icons8-menu-50-white-rounded-bg.png" alt="menu" id="hamburger-menu"/>
         <img src="images/logos/icons8-menu-50-orange-bg.png" alt="menu" id="hamburger-menu-hover"/>
-      </div>
+      </p>
   
       <a href="https://github.com/2308-team-8/laridae" target="_blank">
         <img src="images/logos/icons8-github-96.png" alt="github logo" id="github-logo" />
@@ -102,62 +104,1278 @@
         </nav>
 
         <h2 id="introduction">1) Introduction</h2>
+        <h3 id="overview-of-laridae">1.1) Overview of Laridae</h3>
         <p>
-          Laridae is a zero-downtime, reversible database schema migration tool for PostgreSQL. 
-          Laridae utilizes GitHub Actions to automate database schema changes and corresponding 
-          application deployments on ECS Fargate. Laridae standardizes a workflow that ensures 
-          the database and application code stay in sync and function normally as schema changes 
-          are executed safely, i.e., reversible.
+          Laridae enables reversible, zero-downtime schema migrations in PostgreSQL, synchronizing them with application code 
+          deployments for apps using AWS Fargate. It allows application instances expecting the pre-migration and post-migration 
+          schema to use the same database simultaneously without requiring changes to either version's code. Additionally, recent 
+          schema migrations can be reversed without data loss. This is accomplished with minimal interference with usual reads 
+          and writes to the database.
         </p>
         <p>
-          Laridae creates infrastructure for hosting the core Laridae migration tool inside your 
-          own AWS VPC network and fully automates the process of making a schema change to your 
-          private PostgreSQL database and redeploying the application instance configured to utilize 
-          the updated database schema on ECS Fargate.
+          Laridae integrates this schema migration functionality into a deployment pipeline hosted on GitHub Actions. It creates 
+          the necessary infrastructure inside users&rsquo; AWS accounts, allowing GitHub Actions to communicate securely with your private 
+          PostgreSQL database and coordinates schema changes with code deployments.
         </p>
-          
-        <h3 id="design-goals">1.1) Design Goals</h3>
-        <p>
-          Laridae is a tool to automate database schema migrations and simplify the deployment of schema changes. 
-          We designed Laridae with the following goals in mind:
-        </p>
-        <ul>
-          <li>Convenience — The tool should be easy to install and configure.</li>
-          <li>Cost-Efficiency — The user should only incur expenses for the resources used on AWS, with no need for an opaque monthly fee.</li>
-          <li>Control — The tool should rely on the user's cloud infrastructure so the user can maintain control over their data.</li>
-        </ul>
 
-        <h3 id="laridae-features">1.2) Laridae Features</h3>
-        <p>Laridae users can:</p>
+        <h3 id="the-big-picture-problem">1.2) The Big Picture Problem</h3>
+        <p>
+          Before deep diving into the rest of this write-up, we&rsquo;ll set the stage by explaining what motivated the development of Laridae.
+        </p>
+        
+        <p>
+          If we radically simplify an application - any application - we are left with two crucial components: the <strong>Application 
+          Code</strong>, and the <strong>Database</strong>. As the application grows, maintenance of the code base needs to be 
+          accompanied with updates to the corresponding database.
+        </p>
+        
+        <p>
+          This raises an interesting problem: How do we ensure that database and application code changes occur harmoniously?
+        </p>
+        
+        <p>Consider this example:</p>
+        
         <ul>
-          <li>Initialize a GitHub Action workflow to:
+          <li>
+            <p>
+              Our current application stores data in a PostgreSQL server. The application reads customers&rsquo; phone numbers from a 
+              table called <em>phones</em>, which stores phone numbers as type char(10), meaning each number is a string of 
+              <strong>strictly</strong> 10 characters.
+            </p>
+            <img src="images/diagrams/big-picture-1.png"/>
+          </li>
+          <li>
+            <p>
+              Though all the phone numbers were initially from the US, a need eventually arose to allow phone numbers from other countries, 
+              meaning we needed to include the country code in our stored phone numbers. We could update our phone column to the type of 
+              char(11) manually - making each number a string of <strong>strictly</strong> 11 characters (the original 10 + country code of 
+              (1) for the USA). However, our original application code expects a string without a country code and may rely on this assumption, 
+              for instance, by assuming that the first three digits are the phone number’s area code. Yes, a <em>single</em> character 
+              addition to a <em>single</em> field in a <em>table might</em> be enough to unravel everything. In the best case scenario, the 
+              application gets confused and does nothing. Worst case scenario, the application breaks.
+            </p>
+            <img src="images/diagrams/big-picture-2.png"/>
+          </li>
+          <li>
+            <p>
+              That obviously sounds bad. We consider updating the application code first: We change the application to expect a string with a 
+              country code instead. Still, the database has not been updated to store char(11) phone numbers. Again, this could break the 
+              application.
+            </p>
+            <img src="images/diagrams/big-picture-3.png"/>
+          </li>
+        </ul>
+        
+        <p>
+          Laridae was created to ensure this updating process happens seamlessly and, most importantly, at no availability cost to the application. 
+          This means no scheduled maintenance downtime. Laridae allows different versions of the application code to work on the same database 
+          simultaneously. Furthermore, Laridae automates the deployment of database changes and application code changes in the correct order.
+        </p>
+        <p>
+          In the rest of this paper, we explain how this is accomplished.
+        </p>
+
+        <h3 id="use-case">1.3) Use Case</h3>
+        <p>Currently, Laridae supports deployments that:</p>
+        <ul>
+          <li>
+            <p>Have the codebase maintained in a GitHub repository.</p>
+          </li>
+          <li>
+            <p>Have an application hosted on AWS Fargate.</p>
+          </li>
+          <li>
+            <p>Use a PostgreSQL database, which could be AWS RDS or others.</p>
+          </li>
+          <li>
+            <p>Are performing one of the following schema migrations:</p>
             <ul>
-              <li>Provision all AWS resources to create the infrastructure to host the core Laridae migration tool.</li>
-              <li>Execute the database schema changes in their database.</li>
-              <li>Upon completion of migration changes, redeploy the application instance configured to utilize updated schema changes on ECS Fargate.</li>
-              <li>Tear down all AWS resources used in said infrastructure.</li>
+              <li>
+                <p>Add new column</p>
+              </li>
+              <li>
+                <p>Add an index to a column</p>
+              </li>
+              <li>
+                <p>Rename a column</p>
+              </li>
+              <li>
+                <p>Add a not null, unique, foreign key, or check constraint to a column</p>
+              </li>
+              <li>
+                <p>Drop a column</p>
+              </li>
+              <li>
+                <p>Change a column’s data type</p>
+              </li>
             </ul>
           </li>
-          <li>In addition to automating the integration of database schema migrations, Laridaer:
-            <ul>
-              <li>It can be used as a standalone CLI tool, or the CLI tool can be integrated into your own pipeline.</li>
-            </ul>
-          </li>
-        </ul>
-          
-        <h3 id="what-laridae-supports">1.3) What Laridae Supports</h3>
-        <ul>Currently, Laridae only supports:
-          <li>Applications using a PostgreSQL database.</li>
-          <li>Pipelines where the application code is deployed on ECS Fargate.</li>
         </ul>
 
-        <section id="footnotes">
+        <h2 id="problem-domain">2) Problem Domain</h2>
+
+        <h3 id="why-make-schema-changes">2.1) Why make schema changes</h3>
+
+        <p>
+          Schema changes are changes to the structure of the database, such as adding a column to a table, changing the datatype of a column 
+          in a table, adding a new table to the database, etc.
+        </p>
+
+        <p>
+          There are many cases where a schema change is necessary, including the following:
+        </p>
+        
+        <ul>
+          <li>
+            <p>
+              <strong>New Features:</strong> Adding or adjusting features in a new version of an application often requires database schema changes. 
+              For example, new data types must be stored, columns must be added, or constraints must be adjusted.
+            </p>
+          </li>
+          <li>
+            <p>
+              <strong>Normalization:</strong> Normalization helps reduce redundancy and prevent data anomalies. It requires schema changes like adding 
+              Foreign Keys and separating large denormalized tables into smaller, more focused tables.
+            </p>
+          </li>
+          <li>
+            <p>
+              <strong>Tuning Queries:</strong> Schema changes such as refining database indexes or denormalizing to avoid JOINs for common queries 
+              can increase query efficiency.
+            </p>
+          </li>
+        </ul>
+        
+        <p>
+          Schema changes often impact the existing data. Data Propagation is the process of transforming data from the old schema to fit the new one.
+        </p>
+
+        <h3 id="schema-migration-challenges">2.2) Schema Migration Challenges</h3>
+
+        <p>
+          Implementing changes to applications with databases involves several challenges:
+        </p>
+
+        <ul>
+          <li>
+            <p>
+              <strong>Compatibility:</strong> As we saw in the above example, throughout the entire migration process, both the database and the 
+              application code, whichever version, must align with each other's expectations. For example, suppose one version of the application 
+              code is written, assuming the database has a column with a particular data type. Whenever it’s deployed, the database needs to have 
+              that column. Conversely, if one column in the database has a specific constraint, any version of the app that writes to that column 
+              must respect that constraint or handle the error that occurs when it is violated. It's crucial to ensure that changes in either 
+              the app or database do not break the functionality of the other.
+            </p>
+          </li>
+          <li>
+            <p>
+              <strong>Reversibility:</strong> In the event of an issue during the migration process, the ability to revert to a prior functional 
+              state of data and code is essential.
+            </p>
+          </li>
+          <li>
+            <p>
+              <strong>Availability:</strong> A schema migration should avoid disrupting reads and writes from the application. The gold standard is 
+              a zero-downtime migration: one without app interference. This is usually not strictly possible in practice, but interference can still 
+              be minimized.
+            </p>
+          </li>
+          <li>
+            <p>
+              <strong>Standardized workflow:</strong> By default, schema changes are handled as one-off alterations applied manually to the database. 
+              This means they may require intervention from dev ops personnel, be challenging to synchronize with code deployments, especially 
+              automatic ones, and leave no record.
+            </p>
+          </li>
+        </ul>
+        <img src="images/diagrams/schema-migration-challenges.png"/>
+        
+
+        <h2 id="schema-migration-strategies">3) Schema Migration Strategies</h2>
+        
+        <h3 id="big-bang">3.1) Big Bang</h3>
+
+        <p>
+          When faced with the need to implement database schema migrations, an obvious first approach is to use what is known as a Big Bang 
+          strategy: A Big Bang migration consists of taking the application down, performing the schema migration, updating the application 
+          during downtime, and then deploying the new version of the application.
+        </p>
+        <p>
+          <img src="images/diagrams/big-bang.png">
+        </p>
+        
+        <p>
+          This approach increases the risk of failure: if the new application has a problem, there is often no way to restore the original version 
+          of the database beyond relying on snapshots or backups, either throwing out writes that occurred since the migration or applying them 
+          manually.
+        </p>
+        
+        <p>
+          Furthermore, and most significantly, it requires significant downtime.
+        </p>
+        
+        <p>
+          The Big Bang strategy only addresses one of the challenges associated with database schema changes: compatibility. Temporarily bringing down 
+          the application before migration and bringing up the new version only after the migration is complete ensures constant compatibility between 
+          the running code and the existing database. However, the cost is enormous, sacrificing availability, and the process is entirely manual.
+        </p>
+        
+        <p>
+          The Big Bang strategy leaves a lot to be desired. However, there are other solutions that seek to mitigate database schema migration challenges. 
+          Three common approaches are Schema Versioning, Online Schema Changes, and the Expand-and-Contract pattern.
+        </p>
+
+        <h3 id="schema-versioning">3.2) Schema Versioning</h3>
+
+        <p>
+          Schema versioning tools like<a href="https://flywaydb.org/">Flyway</a>, <a href="https://www.liquibase.com/">Liquibase</a>, and 
+          <a href="https://sqitch.org/">Squitch</a> require the user to create, for each migration, a migration script that specifies the 
+          schema change and how the relevant data should be transformed to fit in the new schema (for instance, when performing a migration which adds a 
+          constraint to a column, part of the migration script specifies what to do with data in that column that doesn't fit the constraint). The tools 
+          then modify the database based on that script.
+        </p>
+
+        <p>
+          The migration scripts are assigned versions and stored, providing a historical view of the database schema as it moves through time. This 
+          permits schema changes to be easily applied to another instance of the database, like one used for production. It also allows the database 
+          schema to be rolled back to an earlier version later, providing reversibility.
+        </p>
+        
+        <p>
+          Still, after destructive operations like dropping columns, there is no means of restoring the lost data. This style of tool also does not 
+          address the challenges of making the code and database compatible, coordinating code and schema changes, or avoiding interference with usual 
+          reads and writes.
+        </p>
+
+        <img src="images/diagrams/schema-versioning.png"/>
+
+        <h3 id="online-schema-change">3.3) Online schema change</h3>
+        <p>
+          Online schema change tools modify a database schema without interrupting the database's regular operation by running a migration 
+          through simulation:
+        </p>
+
+        <ul>
+          <li>
+            <p>First, a <strong>ghost table</strong> is created. This a new, empty table with the same schema as the original table.</p>
+          </li>
+          <li>
+            <p>The ghost table is populated with original data via backfilling.</p>
+          </li>
+          <li>
+            <p>The migration happens on the ghost table. As part of the migration process, any newly written data from traffic is propagated to the ghost table.</p>
+          </li>
+          <li>
+            <p>Once the migration is complete, the original table is swapped with the ghost table.</p>
+          </li>
+        </ul>
+        
+        <p>
+          This process allows the database to remain operational without interrupting users, addressing the availability challenge. Tools such as 
+          <a href="https://planetscale.com/">PlanetScale</a> and <a href="https://github.com/github/gh-ost">gh-ost</a> utilize this strategy.
+        </p>
+        
+        <p>
+          <img src="images/diagrams/gh-ost-table.png">
+        </p>
+        
+        <p>
+          However, in addition to this strategy potentially taking a long time to complete, since the entire table must be recreated elsewhere, it 
+          only partially addresses the reversibility challenge. These tools only provide reversibility for a brief time frame immediately following 
+          the completion of the migration. During that window, the original table continues to be updated to facilitate quickly switching back to it 
+          if something goes wrong.
+        </p>
+        
+        <p>
+          This strategy also doesn’t provide a way to address the compatibility challenges associated with schema migrations. There is a clear “breakpoint” 
+          when the database switches to the new version. The application code needs to handle this abrupt change of data. Either:
+        </p>
+        
+        <ul>
+          <li>
+            <p>Option 1: The new application version needs to be deployed at exactly that break point moment so that the correct application version can receive the database. This is not possible if the app has constant traffic.</p>
+          </li>
+          <li >
+            <p>Option 2: The application code must be written to handle <strong>both</strong> database versions simultaneously.</p>
+          </li>
+        </ul>
+        
+        <p>Regardless of which option is used, this places the burden of compatibility squarely on the application developers.</p>
+
+
+        <h3 id="expand-and-contract">3.4) Expand-and-Contract</h3>
+        
+        <p>
+          The Expand-and-Contract pattern, in essence, consists of three steps:
+        </p>
+
+        <ul>
+          <li>
+            <p><strong>Expand:</strong> The database is modified to tolerate old and new application versions.</p>
+          </li>
+          <li>
+            <p><strong>Deploy:</strong> All the application instances are (over time) switched to the new version.</p>
+          </li>
+          <li>
+            <p><strong>Contract:</strong> The database is modified to work with only the new version of the application.</p>
+          </li>
+        </ul>
+        
+        <p>
+          <img src="images/diagrams/expand-and-contract.png">
+        </p>
+        
+        <p>
+          After the Expand phase, the database can work with both new and old application code versions. As such, Expand-and-Contract handles 
+          <strong>Rolling Back</strong> seamlessly: should an issue (such as a security or functionality bug) occur, the old application code 
+          version can be deployed immediately without causing breaking changes.
+        </p>
+        
+        <p>
+          To apply to the example laid out earlier (switching phone numbers from char(10) to char(11)), the process would play out <em>roughly 
+          </em>as follows:
+        </p>
+        
+        <ul>
+          <li>
+            <p>Expand: A new phone column is added to the existing table, with the data type of char(11).</p>
+          </li>
+          <li>
+            <p>
+              Deploy: A new version of the application code, which requires 11-digit phone numbers, can be rolled out on the application server clusters. 
+              This application version can use the new column for its functionality. Any instance of the application cluster running the old version can 
+              still safely use the old column with the 10-digit phone numbers.
+            </p>
+          </li>
+          <li>
+            <p>
+              Contract: When all the application instances are running the new code, the old phone column can be safely dropped from the table without 
+              affecting application availability.
+            </p>
+          </li>
+          <li >
+            <p>
+              Rollback: After the Deploy step but before the Contract step, if we decide to stick with 10-digit phone numbers, the old version of the 
+              application can be re-deployed, and it should still work.
+            </p>
+          </li>
+        </ul>
+        <p>
+          Tools like <a href="https://github.com/xataio/pgroll">pgroll</a> and <a href="https://github.com/fabianlindfors/reshape">Reshape</a> help
+           automate the Expand-and-Contract process. The core functionality of Laridae is similar to these tools, but it has significant differences we 
+           will explain in time. In the following few sections, we explore some of the trade-offs of Expand-and-Contract.
+        </p>
+
+        <h4 id="advantages-of-expand-and-contract">3.4.1) Advantages of Expand-and-Contract</h4>
+
+        <p>
+          Expand-and-Contract solves the compatibility problem by pushing the difficulty of schema change coordination onto the database: different 
+          parts of the database satisfy the needs of each code version. Aside from knowing which columns to reference in their queries, the maintainers 
+          of the application code do not have to deal with any extra complexity during the migration process.
+        </p>
+
+        <p>
+          This approach also addresses the challenge of reversibility. Until the Contract step, everything the old code needs is still present, so the 
+          database changes can be undone without data loss.
+        </p>
+        
+        <p>However, things are more complex than they sounded above.</p>
+
+        <h4 id="challenges-of-expand-and-contract">3.4.2) Challenges of Expand-and-Contract</h4>
+        
+        <p>
+          For new application instances to be aware of the changes to the database made by the old ones and vice versa, data has to be transferred between 
+          the old and new columns. Transferring data comes in two forms:
+        </p>
+
+        <ul>
+          <li>
+            <p><strong>Backfilling:</strong> Existing data already present in the old version of the column has to be transferred to the new version</p>
+          </li>
+          <li>
+            <p><strong>Write Propagation:</strong> New writes to either column must be accompanied by writes to the other one.</p>
+          </li>
+        </ul>
+
+        <p>How data is transferred between the two columns depends on the specific scenario.</p>
+        
+        <p>In our phone number example, numbers already present or written in the old column must be added to the new column with a US country code.</p>
+        
+        <p>
+          However, if a number with a country code is written from the new application, the same number with the country code dropped must be written to 
+          the old column.
+        </p>
+        
+        <p>
+          <img src="images/diagrams/read-write-propagation.png">
+        </p>
+        
+        <p>
+          Write propagation can be accomplished either in the application code, by changing both versions to write to both columns, or by database 
+          mechanisms like triggers and rules, which affect automatic changes in response to specific operations (which we&rsquo;ll discuss in detail below).
+        </p>
+        
+        <p>Here&rsquo;s a more fleshed-out version of how the Expand-and-Contract pattern applies to the above example, including data transfer:</p>
+        
+        <ol>
+          <li>
+            <p>Add a new column with the new data type.</p>
+          </li>
+          <li>
+            <p>Set up write propagation: either</p>
+            <ul>
+              <li>
+                <p>
+                  Database triggers to automatically propagate changes from the old column to the new one, and vice versa. Both the old and new versions of the 
+                  code write to both columns.
+                </p>
+              </li>
+            </ul>
+          </li>
+          <li>
+            <p>Backfill data from the old column to the new one.</p>
+          </li>
+          <li>
+            <p>(Potentially incrementally) Transition application instances from the old version to the new one.</p>
+          </li>
+          <li>
+            <p>Delete the old column.</p>
+          </li>
+        </ol>
+
+        <h4 id="disadvantages-of-expand-and-contract">3.4.3) Disadvantages of Expand-and-Contract</h4>
+        
+        <p>The Expand-and-Contract pattern does have some trade-offs:</p>
+        
+        <ul>
+          <li>
+            <p>
+              The sequence of changes to the database becomes more complicated as more steps are involved in transitioning to the intermediate schema 
+              and, then, the final one, then directly to the new one.
+            </p>
+          </li>
+          <li>
+            <p>The intermediate schema during the migration is more complex than the former or the new schema.</p>
+          </li>
+          <li>
+            <p>Maintaining both versions of the column takes extra storage.</p>
+          </li>
+        </ul>
+
+        <h3 id="migration-strategies-summary">3.5) Migration Strategies Summary</h3>
+
+        <p>
+          <img src="images/diagrams/migration-strategies.png">
+          <p><em>* does not mitigate the risk of data loss</em></p>
+        </p>
+
+        <p>
+          No single migration strategy addresses all four challenges we seek to mitigate. Each approach has pros and cons; depending on the use case, 
+          they are all viable options.
+        </p>
+
+        <p>
+          Ultimately, we selected the Expand-and-Contract method as Laridae’s underlying schema migration strategy. It was chosen for its ability to 
+          handle compatibility and reversibility obstacles and our belief that Expand-and-Contract utilized with other implementation strategies can
+           be used to resolve the availability and standardized workflow problems.
+        </p>
+
+        <h2 id="automating-expand-and-contract">4) Automating Expand-and-Contract</h2>
+
+        <h3 id="laridae-automation-overview">4.1) Laridae Automation Overview</h3>
+        
+        <p>
+          As we discussed above, the Expand-and-Contract process, while helpful, adds complexity to the migration process. Laridae helps to alleviate 
+          this complexity.
+        </p>
+
+        <p>
+          Instead of directly modifying the database to Expand or Contract, a user provides Laridae with a <strong>migration script</strong>, a JSON 
+          document containing the details of what schema change to perform. Laridae can then automatically Expand the database to a form that can handle 
+          applications expecting the pre-migration or post-migration schema and eventually Contract it to the new schema. In subsequent sections, we 
+          discuss the details of how this is accomplished.
+        </p>
+        
+        <p><img src="images/diagrams/migration-json-example.png"></p>
+
+        <h2 id="how-laridae-enables-compatibility">5) How Laridae Enables Compatibility</h2>
+
+        <p>
+          Recall from the phone example above that, to change phone data from 10-digit to 11-digit, we created a new column with char(11) data type. 
+          Columns with the same name are not allowed. Therefore, we have to name the new column something different:
+        </p>
+
+        <p>
+          <img src="images/diagrams/compatibility-1.png">
+        </p>
+
+        <p>
+          However, the application developers do not know about this new column’s different name. They <strong>should not</strong> have to. The app 
+          developers should be able to write a new version of the new application that accesses a “number” column. The database should be able to 
+          <em>just know</em> that this application is the new version and give the “new_number” data instead.
+        </p>
+
+        <p>
+          Remember, Expand-and-Contract’s ultimate goal is eventually to delete the old column from the database. In other words, the database should 
+          behave as if only one phone column exists. The catch is that the number column has to be the correct version.
+        </p>
+
+        <p>
+          <img src="images/diagrams/compatibility-2.png">
+        </p>
+
+        <p>
+          To achieve this, Laridae uses two PostgreSQL features to present multiple versions of the same table to different application instances: 
+          Views and Namespace Schemas.
+        </p>
+                
+        <h3 id="views">5.1) Views</h3>
+        
+        <p>
+          A View is a virtual table that combines columns from one or more tables, potentially with some of them renamed. It can be read from and written 
+          to just like a standard table and writes propagate to the original tables the columns were taken from. A View is created from a SELECT query 
+          specifying the desired columns and the names they will display in the View.
+        </p>
+
+        <p>
+          <img src="images/diagrams/views.png">
+        </p>
+
+        <h3 id="namespace-schemas">5.2) Namespace Schemas</h3>
+        
+        <p>
+          In PostgreSQL, in addition to the usual meaning of schema, the term also denotes something completely different: a namespace within a database 
+          that contains objects like tables, views, functions, constraints, indexes, sequences, and more. Moving forward, we will refer to this definition 
+          of schema as the namespace schema.
+        </p>
+
+        <p>
+          <img src="images/diagrams/namespace-schema.png">
+        </p>
+        
+        <p>
+          Multiple objects in a single database can have the same name if they exist in different namespace schemas. Namespace schemas are analogous to 
+          directories at the operating system level.
+        </p>
+        
+        <p>
+          When you reference a table or object by name, which schemas PostgreSQL looks in is determined by the <strong>Schema Search Path</strong>, a 
+          variable defined for each database session containing a comma-separated list of schemas. PostgreSQL proceeds through the list one at a time 
+          until it finds a schema containing an object with the desired name. The search path can be set as part of the database URL or manually changed 
+          with a SQL command.
+        </p>
+        
+        <h3 id="how-these-elements-work-together">5.3) How these elements work together</h3>
+
+        <p>
+          During the Expand phase, Laridae performs additive changes to the database. When a breaking change is required on a column, such as adding a 
+          constraint, it creates a new column with the same type as the original one without any data and applies the change there. Any existing constraints 
+          on the original column are propagated to the new version. Ultimately, we end up with a table containing all the columns needed for both the 
+          pre-migration and post-migration database schema.
+        </p>
+
+        <p>At this point, Laridae creates two Views of the table:</p>
+        <ul>
+          <li>
+            <p><strong>Before View:</strong> contains the pre-migration columns</p>
+          </li>
+          <li>
+            <p><strong>After View:</strong> contains the post-migration columns</p>
+          </li>
+        </ul>
+        
+        <p>
+          Although new versions of columns have a different name than their source column in the underlying table, they are aliased to have the original 
+          name in the post-migration View. These two Views are given the same name as the original table and placed in two different namespace schemas.
+        </p>
+        
+        <p>
+          <img src="images/diagrams/physical-schema-w-views.png"><br>
+          <em>Migration Operation: Change the data type of the phone column from char(10) &gt; char(11)</em>
+        </p>
+        
+        <p>
+          Different columns are exposed to different application instances depending on which version of the namespace schema and corresponding PostgreSQL 
+          View they are configured to use through their database URL. This allows client applications to be updated to use the new schema version without 
+          any compatibility worries.
+        </p>
+        
+        <h2 id="data-propagation">6) Data Propagation</h2>
+
+        <h3 id="backfilling">6.1) Backfilling</h3>
+
+        <p>
+          Now, we have our new columns and Views set up to expose the old or new version of the database schema, but the new columns are empty. In order 
+          to prevent data loss when we switch over entirely to the new version of the schema and get rid of the old column, we need to transfer the data 
+          from the original column to the new column. This process is called backfilling.
+        </p>
+
+        <p>
+          As mentioned earlier when discussing Expand-and-Contract, how data is transformed before being placed in the new column depends on the specific 
+          use case. Laridae allows the user to specify the transformation using SQL in their migration script (and, as we’ll see below, a transformation 
+          in the opposite direction when writes occur to the new column version). Backfilling is performed by standard UPDATE statements, though, as we 
+          discuss later, the updates are batched to avoid overly interfering with other traffic.
+        </p>
+        
+        <h3 id="triggers">6.2) Triggers</h3>
+
+        <p>
+          Backfilling ensures the new version of the column initially reflects the old one, but how do we keep old and new versions of a column in sync as 
+          new writes occur to either version? In PostgreSQL, triggers allow you to specify actions that happen automatically in response to operations on a
+           table. One variety of trigger, a row-level trigger, is activated separately for each row that is changed; when creating the trigger, you can 
+           specify which operations to respond to and what modifications to make to the row being altered before it is committed to the table.
+          </p>
+
+        <p>
+          Laridae uses row-level triggers to propagate changes between a column’s old and new versions: the trigger is set to respond to INSERTs and UPDATEs. 
+          If the old version of the column was modified, the change is propagated to the new version using the transformation specified by the user, and 
+          vice versa.
+        </p>
+
+        <p>
+          Here’s an example of this, using the same scenario presented earlier when describing Expand-and-Contract in general: changing the column’s data 
+          type containing phone numbers to allow for an extra digit.
+        </p>
+
+        <p>
+          <img src="images/diagrams/triggers.png">
+        </p>
+
+        <p>
+          At this point, the Expand phase has concluded. Applications can access the pre-migration or post-migration database schema by adjusting their 
+          connection string’s search path to point at the appropriate PostgreSQL namespace schema.
+        </p>
+        
+        <h2 id="deploy-and-contract">7) Deploy and Contract</h2>
+
+        <p>
+          Once the Expand phase is complete, we enter the Deploy phase. The latest application code version must update its connection string so that 
+          its search path points to the new schema (we will discuss how we handle this in the automated pipeline later). Meanwhile, instances of the old 
+          application are still reading and writing to the original columns. All the application instances continue to work as expected as we incrementally 
+          deploy the new application version.
+        </p>
+
+        <p>
+          Lastly, once all instances of the old application version have been taken down, we enter the Contract phase: Laridae removes any schemas, views, 
+          and columns needed to support both application code versions. Any columns and constraints added during the Expand phase are renamed to reflect 
+          their final names. The new version of the client application continues to work as expected.
+        </p>
+        
+        <h2 id="rollback">8) Rollback</h2>
+        
+        <p>
+          As mentioned earlier, one significant advantage of Expand-and-Contract is the ease of executing rollbacks if needed. Rollbacks are often necessary 
+          if an application update introduces a system-crashing or security-breaching bug. Rolling back to a previous version can restore the application to 
+          a stable state.
+        </p>
+
+        <p>
+          We should also note the distinction between the <em>application</em> rollback and the <em>database</em> rollback:
+        </p>
+        
+        <ul>
+          <li>
+            <p>In <strong>Application Rollback</strong>, the purpose is for the older version of the application code to be deployed and working.</p>
+          </li>
+          <li>
+            <p>In <strong>Database Rollback</strong>, the goal is to restore the database to its earlier state, as if the Expand process was never executed.</p>
+          </li>
+        </ul>
+        
+        <p>
+          To roll back the application, all that is needed is to deploy the old code again. After the Expand phase, our Database can support both old and 
+          new versions of the application code. Therefore, the application should continue to work with the database as is.
+        </p>
+        
+        <p>
+          Laridae cleans up artifacts created by the Expand process to roll back the database. This includes created columns, schema, and constraints. 
+          Because data was propagated during and after the Expand process, newly written data should also exist in the old column. As such, rolling back 
+          does not cause data loss.
+        </p>
+        
+        <h2 id="preserving-application-availability">9) Preserving Application Availability</h2>
+       
+        <p>
+          We’ve discussed how Laridae automates the Expand-and-Contract pattern to ensure compatibility with both application versions and allow schema 
+          migrations to be safely reversed. Still, we haven’t yet presented how it performs schema changes without interfering with the usual reads and 
+          writes from the application.
+        </p>
+
+        <h3 id="about-locking">9.1) About Locking</h3>
+
+        <p>
+          Many schema changes acquire locks that can block other database traffic for an extended period, so understanding the nuances of PostgreSQL's 
+          locking behavior is crucial for preserving application availability.
+        </p>
+
+        <p>First, let’s learn more about PostgreSQL’s locking behavior:</p>
+
+        <ul>
+          <li>
+            <p>Locks are the mechanisms PostgreSQL uses to prevent conflicts between concurrent operations.</p>
+          </li>
+          <li>
+            <p>Locks can be held on tables or individual rows. Different operations acquire different types of locks on the tables and rows they modify, and while some types of locks can be held simultaneously on the same object, other types conflict. Most notably, for our purposes, the AccessExclusive table lock prevents access to the table from any other transaction. In a multi-user or high-transaction environment, this can decrease system performance and response time, as other transactions attempting to read or write to the locked table are forced to wait.</p>
+          </li>
+        </ul>
+        
+        <p>
+          <img src="images/diagrams/lock-types.png">
+        </p>
+
+        <p>
+          Of note, most migrations cannot be genuinely zero-downtime in the sense of never blocking other database traffic because they require the 
+          AccessExclusive lock for some time. We can, however, aim to reduce the time that a migrating table holds AccessExclusive locks to a minimum.
+        </p>
+
+        <p>As such, we must define what we consider a “zero-downtime” migration.</p>
+
+        <h3 id="defining-zero-downtime-migration">9.2) Defining Zero-Downtime Migration</h3>
+
+        <p>
+          There is no strict rule to define this time amount; companies have internal guidelines regarding how long each schema change operation can be 
+          in a continuously locked state. The exact value can vary between 2 seconds 
+          (<a href="https://medium.com/paypal-tech/postgresql-at-scale-database-schema-changes-without-downtime-20d3749ed680">PayPal</a>) to 15 seconds 
+          (<a href="https://docs.gitlab.com/ee/development/migration_style_guide.html">GitLab</a>). Of note, the higher end of this range can also be 
+          considered a severe downtime by other companies (<a href="https://gocardless.com/blog/zero-downtime-postgres-migrations-the-hard-parts/">
+            GoCardless</a> considers a 15-second downtime a serious incident).
+          </p>
+
+        <p>
+          We decided to go with a more conservative number, 2 seconds maximum downtime per migration. In light of this limitation, we define a 
+          zero-downtime schema migration as any migration that preserves service availability: traffic should still be able to be received by the 
+          application at a reasonable time (less than 2 second wait time). To achieve this, among other things, we need to ensure that no transaction 
+          continuously holds the AccessExclusive for more than 2 seconds.
+        </p>
+        
+        <p>To achieve our definition of zero downtime, we use the following strategies:</p>
+        
+        <ol>
+          <li>
+            <p>Create constraints and validate them separately.</p>
+          </li>
+          <li>
+            <p>Create indices concurrently.</p>
+          </li>
+          <li>
+            <p>Backfill in batches.</p>
+          </li>
+          <li>
+            <p>Obtain locks with timeouts.</p>
+          </li>
+        </ol>
+
+        <h3 id="constraints">9.3) Constraints</h3>
+
+        <p>
+          CHECK constraints ensure data in a column meets a specified condition. When creating a CHECK constraint on a table, the typical SQL statement 
+          would be:
+        </p>
+
+        <p>ALTER TABLE table<br>ADD CONSTRAINT constraint_name CHECK (condition);</p>
+        
+        <p>
+          While creating a check constraint does not impose a lock on the entire table, validating the check constraint against the existing table data 
+          obtains an AccessExclusive lock on the table. The validation process may take longer for larger tables.
+        </p>
+        
+        <p>
+          For a table with 10 million rows, adding a NOT NULL constraint using the naive approach took 6.6 seconds, 100% of which was in AccessExclusiveLock. 
+          To avoid locking the table for more than 2 seconds so that we can satisfy the requirement for zero downtime, Laridae breaks the process into 2 
+          phases:
+        </p>
+        
+        <ul>
+          <li >
+            <p>Creating the CHECK constraint using the NOT VALID keyword to avoid immediate validation of existing data, which in turn avoids locking:</p>
+            <p>ALTER TABLE table<br>ADD CONSTRAINT constraint_name CHECK (condition) NOT VALID;</p>
+          </li>
+          <li >
+            <p>VALIDATE the constraint at a later time, which does not require table-level locking:</p>
+            <p>ALTER TABLE table VALIDATE CONSTRAINT constraint_name;</p>
+          </li>
+        </ul>
+        
+        <p>
+          Using this 2-phase strategy, for a table with 10 million rows, adding a NOT NULL constraint took 10.6 seconds, 14 milliseconds for the first 
+          phase, and 10.5 seconds for the second phase. However, no AccessExclusiveLock was obtained during either phase. Thus, the table will be accessible 
+          during the operation.
+        </p>
+        
+        <h3 id="indices">9.4) Indices</h3>
+
+        <p>A standard SQL query for creating an index in PostgreSQL:</p>
+
+        <p>CREATE INDEX index_name ON table (column);</p>
+        
+        <p>
+          By default, PostgreSQL acquires a ShareLock on the table during this operation. PostgreSQL locks the table to be indexed against writes and 
+          performs the entire index build with a single table scan. Other transactions can still read the table, but if they try to insert, update, or 
+          delete rows, they will be blocked until the index build finishes.
+        </p>
+        
+        <p>For a table with 10 million rows, creating an index without concurrency took 82.6 seconds, 100% of which obtained ShareLock.</p>
+        
+        <p>
+          PostgreSQL provides options for concurrent index creation, allowing reads and writes to continue on the table during the index creation process. 
+          This is achieved using the CONCURRENTLY keyword:
+        </p>
+        
+        <p>CREATE INDEX CONCURRENTLY index_name ON table (column);</p>
+        
+        <p>
+          During a concurrent index build, the index is initially recorded as an "invalid" entry in the system catalogs within a single transaction. 
+          Subsequently, two or more separate transactions conduct table scans. Before each scan, the index build process pauses, awaiting the completion 
+          of existing transactions. This under-the-hood separation into phases is similar to what Laridae had to manually implement to create check 
+          constraints.
+        </p>
+        
+        <p>Creating an index using concurrency for a table with 10 million rows took 95.2 seconds without obtaining ShareLock.</p>
+
+        <h3 id="backfilling-in-batches">9.5) Backfilling in Batches</h3>
+
+        <p>The naive approach to backfilling uses a single SQL statement:</p>
+
+        <p>UPDATE TABLE … SET column = value;</p>
+
+        <p>
+          This statement obtains the RowExclusiveLocks on all the rows in the table, and the locks aren’t released until the entire statement finishes 
+          executing. This means all rows will be locked exclusively for the whole backfill duration, which is on the order of minutes for a table with 
+          10 million rows.
+        </p>
+
+        <p>
+          To avoid this long-locking transaction, instead of using one transaction for the entire backfill, Laridae breaks the backfill operations into 
+          batches, with the default batch size of 10,000 rows. By breaking the backfill process into smaller, manageable chunks and allowing for 
+          incremental updates to the database, this approach allows for the continuation of traffic to the service.
+        </p>
+
+        <p>For a table with 10 million rows, this batch backfill process took 1.5 minutes, separated into 1001 transactions:</p>
+
+        <ul>
+          <li>
+            <p>The average time of each transaction was 87.64 milliseconds.</p>
+          </li>
+          <li>
+            <p>The shortest batch time was 0.41 milliseconds.</p>
+          </li>
+          <li>
+            <p>The longest batch time was 242.44 milliseconds (0.2 seconds).</p>
+          </li>
+        </ul>
+        
+        <h3 id="lock-timeout">9.6) Lock Timeout</h3>
+
+        <p>
+          Although we have successfully limited the length of each locked transaction to under two seconds, sometimes - even with short locking - there's 
+          another issue that can make the table inaccessible.
+        </p>
+        
+        <p>
+          <img src="images/diagrams/lock-timeout-1.png">
+          <p>PostgreSQL processes SQL statements in queues.</p>
+        </p>
+        
+        <p>
+          Before a PostgreSQL query obtains a lock, it has to wait on all earlier queries (from any connection) that have <em>or are trying to obtain</em> 
+          conflicting locks.
+        </p>
+        
+        <p>
+          To illustrate why this causes a problem, imagine we're trying to modify a table with a long-running query, perhaps updating the whole table. Our 
+          schema change query requires an Access Exclusive Lock. Unsurprisingly, before our query can execute, it must wait on the existing long-running 
+          query. However, less obviously, any subsequent query accessing the table (from any connection) must wait on our schema change query, even if the 
+          new query doesn't have a lock conflict with the query that’s already running. <strong>We've blocked access to the whole table until the 
+            long-running query finishes.</strong>
+        </p>
+        
+        <p>
+          <img src="images/diagrams/lock-timeout-2.png">
+        </p>
+        
+        <p>
+          If a transaction requires a lock that is being actively held by another transaction, the transaction waits until the required lock is released. 
+          The transaction trying to obtain a lock causes a delay in the queue processing. Transactions later in the queue will be delayed even if the 
+          locks they need do not conflict with the current query.
+        </p>
+        
+        <p>Laridae utilizes the lock_timeout configuration to avoid this scenario.</p>
+        
+        <p>
+          The lock_timeout parameter in PostgreSQL is a configuration setting defining the maximum time a session will wait to acquire a resource lock. 
+          Setting a lock_timeout helps prevent long delays caused by waiting for locks, thereby minimizing the impact on service availability and 
+          improving system responsiveness.
+        </p>
+        
+        <p>
+          <img src="images/diagrams/lock-timeout-3.png">
+        </p>
+        
+        <p>In essence, Laridae:</p>
+        
+        <ul>
+          <li>
+            <p>Explicitly attempts to obtain the needed lock(s) before executing SQL statements and sets a lock_timeout to avoid queueing queries for a long time.</p>
+          </li>
+          <li>
+            <p>If the timeout hits, Laridae “gets out of line” and allows queries behind it to execute.</p>
+          </li>
+          <li>
+            <p>Laridae then keeps retrying until it can obtain the needed locks within the allowed lock_timeout time and only then performs the ALTER TABLE statement.</p>
+          </li>
+        </ul>
+        
+        <p>To summarize, Laridae achieves zero downtime through the following strategies:</p>
+        <ul>
+          <li>
+            <p>When creating CHECK constraints, we use the NOT VALID keywords to avoid table-level locking. We then later validate the constraints.</p>
+          </li>
+          <li>
+            <p>Creating indices concurrently breaks the process into two phases, allowing the creation of an index without blocking write operations on the table.</p>
+          </li>
+          <li>
+            <p>Breaking the backfill operations into smaller, manageable chunks allows for incremental updates to the database and the continuation of traffic to the service.</p>
+          </li>
+          <li>
+            <p>Obtaining locks with timeouts to avoid excessive queuing.</p>
+          </li>
+        </ul>
+
+        <h2 id="laridae-automated-pipeline-integration">10) Laridae Automated Pipeline Integration</h2>
+        
+        <h3 id="motivation">10.1) Motivation</h3>
+        <p>
+          We have presented how Laridae uses the Expand-and-Contract method to address the challenges of reversibility and compatibility and how we 
+          worked with PostgreSQL’s locks to achieve zero downtime migrations. However, one aspect of ensuring compatibility we haven’t yet discussed is 
+          how this schema migration functionality is synchronized with application deployments. Before we do, though, we need to talk about how app 
+          deployments are typically handled.
+        </p>
+        
+        <h3 id="cicd">10.2) CICD</h3>
+
+        <p>
+          CICD (Continuous Integration and Deployment) is a widely used practice for deploying new application versions in a standardized and controlled 
+          fashion. It consists of setting up automated processes that test and deploy new code once they are merged into a release branch of a repository. 
+          The overall flow is as follows.
+        </p>
+        
+        <ul>
+          <li>
+            <p>Developers merge code into their repository’s main branch.</p>
+          </li>
+          <li>
+            <p>A build process is automatically initiated, transforming the code into a form that can be run by installing libraries, compiling, creating container images, etc.</p>
+          </li>
+          <li >
+            <p>The results of the previous step are tested with an automated test suite to help ensure a regression hasn’t occurred.</p>
+          </li>
+          <li>
+            <p>If the tests pass, the code is deployed to a staging area or straight to customers.</p>
+          </li>
+        </ul>
+        
+        <p>
+          How could Laridae be used in an environment like this? If we just offered Laridae as a command-line tool, we’d run into two significant 
+          problems:
+        </p>
+        
+        <ol>
+          <li>
+            <p>If new code required a schema change, Laridae would have to be run manually beforehand to expand the schema and afterward to contract it. This turns the automatic pipeline into an error-prone manual process.</p>
+          </li>
+          <li>
+            <p>Most engineers may not have direct access to the production database if it contains sensitive customer information, so deploying schema changes requires intervention from dev ops personnel.</p>
+          </li>
+        </ol>
+        
+        <p>
+          Existing tools that automate the Expand-and-Contract process, like pgroll and Reshape, inspired our core functionality described above. However, 
+          they are manual command line tools that don’t deal with the problem of coordinating database changes with changes to the code over time. In the 
+          next section, we discuss how Laridae approaches this problem.
+        </p>
+        
+        <h2 id="laridae-action-overview">11) Laridae Action Overview</h2>
+
+        <p>
+          From a bird’s eye view, the Laridae Action consists of insertable <strong>Expand</strong> and <strong>Contract</strong> actions that can be 
+          integrated into users’ existing CICD pipeline. This way, performing Laridae’s reversible, zero-downtime schema changes becomes as easy as 
+          deploying code.
+        </p>
+
+        <p>
+          To make use of these actions, if the user is merging code that expects an updated database schema, they include a migration script in the 
+          commit that specifies the necessary schema change.
+        </p>
+        
+        <p>The Expand action:</p>
+        <ul>
+          <li>
+            <p>It looks for a migration script in the latest commit and uses it to expand the database to tolerate code expecting the new schema.</p>
+          </li>
+          <li>
+            <p>Configures the new application version to access the updated schema</p>
+          </li>
+        </ul>
+        
+        <p>The Contract action:</p>
+        <ul>
+          <li>
+            <p>Waits for the deployment to complete by making sure the user’s application service is stable</p>
+          </li>
+          <li>
+            <p>Contracts the user’s database to only tolerate the new schema</p>
+          </li>
+        </ul>
+        
+        <p>
+          We had to narrow our use case to achieve this integration: we currently support deployment pipelines on GitHub Actions for AWS Fargate 
+          Deployments.
+        </p>
+
+        <h3 id="github-actions">11.1) GitHub Actions</h3>
+
+        <p>
+          GitHub Actions is a popular CI/CD platform. It allows developers to set up automated sequences of events in response to GitHub repositories 
+          changes.
+        </p>
+
+        <p>
+          A GitHub Actions workflow specifies what events, such as pushes, releases, or forks, to listen for and what to do when those events occur. 
+          The steps in a workflow can be individual shell commands or existing Actions from the GitHub Actions marketplace. The machine that runs a 
+          workflow is called a runner, and runners can be self-hosted or hosted by GitHub.
+        </p>
+
+        <h3 id="aws-fargate">11.2) AWS Fargate</h3>
+
+        <p>
+          AWS Fargate is an AWS service for deploying containerized applications frequently used for APIs. Laridae assumes that the Fargate task uses 
+          an environment variable to store the database URL, a standard approach.
+        </p>
+
+        <p>Here’s the AWS infrastructure Laridae expects the client to have in place:</p>
+        
+        <p>
+          <img src="images/diagrams/client-AWS-infrastructure.png">
+        </p>
+
+        <p>
+          This is a standard deployment of a containerized application on Fargate. The application and database are in a private subnet, inaccessible 
+          directly from the broader internet. HTTP Requests pass through the Internet Gateway to a load balancer in the public subnet and are then 
+          routed to the application.
+        </p>
+
+        <p>
+          So, to summarize, merging application code and a migration script into the user’s GitHub triggers their workflow. Our actions Expand users’ 
+          AWS-hosted database schema based on the migration script, modify their Fargate app to reference the new schema, and Contract the user’s schema.
+        </p>
+        
+        <p>
+          <img src="images/diagrams/CICD.png">
+        </p>
+
+
+        <h2 id="accessing-private-databases">12) Accessing Private Databases</h2>
+
+        <p>Implementing the pipeline steps mentioned above involved some challenges, which we now describe.</p>
+        
+        <h3 id="github-runner-needs-access">12.1) GitHub Runner Needs Access</h3>
+
+        <p>
+          As discussed above, our pipeline includes performing Expand-and-Contract on the user's AWS-hosted PostgreSQL database. If the database were 
+          guaranteed to be publically accessible, this would be simple: we could run our code to expand/contract the user’s database directly on the 
+          GitHub runner, providing it with the database URL.
+        </p>
+
+        <p>
+          However, in practice, to improve security, it's common not to provide a production database with a public IP. For an AWS-hosted database, this 
+          is accomplished by having the database in a private subnet.
+        </p>
+
+        <p>
+          Thus we're left with a challenge: if the database has no public IP, how can the GitHub runner communicate with it securely to perform the schema 
+          changes we need?
+        </p>
+
+        <h3 id="possible-solutions">12.2) Possible Solutions</h3>
+
+        <p>We considered several possible solutions to this problem:</p>
+
+        <ul>
+          <li>
+            <p>
+              <strong>Continuously running EC2:</strong> Amazon Elastic Compute Cloud, or Amazon EC2, is a web service that provides virtual servers.
+            </p>
+              
+            <p>
+              A simple option is to add an EC2 to the user’s VPC, give it access to what’s inside, and have the GitHub runner SSH into the EC2 and perform 
+              the migration from there (in this case, the EC2 would commonly be called a jumpbox or bastion host.) However, while simple, giving this much 
+              access to an EC2 introduces a security vulnerability to the user’s network. We could reduce the access to the EC2, but it will still 
+              constantly incur costs even when it’s not used. Similarly, we could set up a self-hosted GitHub actions runner for the user on an EC2, but 
+              this has the same problem.
+            </p>
+          </li>
+          <li>
+            <p>
+              <strong>Lambda</strong>: AWS Lambda is an event-driven, serverless computing platform. It enables developers to run code without provisioning 
+              or managing servers. AWS Lambda executes code in response to events and automatically manages the computing resources required by that code. 
+              The GitHub runner would directly trigger the Lamba using the AWS CLI to avoid creating additional openings to the user’s AWS infrastructure.
+            </p>
+            <p>
+              Using Lambda may seem like a natural approach because Lambda is a cost-effective option for ephemeral processes. However, Lambdas have a 
+              15-minute execution time limit, which poses a challenge for medium to large databases, some of which might take longer to migrate.
+            </p>
+          </li>
+        </ul>
+        
+        <p>
+          Ultimately, we chose another approach because of the abovementioned problems: the GitHub runner uses the AWS CLI to spin up an AWS Fargate 
+          task running Laridae. Fargate, briefly discussed above, is a serverless computing engine for containers. It provides an isolated and secure 
+          environment for running containers, and users can specify the resources their application needs to run, with Fargate handling the provisioning 
+          of compute resources. This is similar to the Lambda approach mentioned above but avoids the restriction on execution time limits. The action 
+          to perform and migration script are passed as environment variables to the task when it’s created.
+        </p>
+
+        <p>
+          <img src="images/diagrams/laridae-aws-infrastructure.png">
+        </p>
+
+        <h3 id="laridae-initialization-script">12.3) Laridae Initialization Script</h3>
+
+        <p>
+          After choosing to run our database-modifying code on Fargate, we are still left with a problem: the GitHub runner needs AWS access, and the 
+          necessary infrastructure to start the Fargate task needs to be in place.
+        </p>
+
+        <p>
+          To achieve this, Laridae provides an initialization script that the user must run before using the GitHub Action. The user provides the script 
+          with the details of their current AWS infrastructure, and the script uses Terraform to create all the resources needed for the GitHub Action 
+          and an AWS IAM user the runner assumes when performing its functions whose access is limited to the necessary AWS services. It also alters the 
+          security group of the user’s database to allow access from the Laridae Fargate task. After the initialization script runs, the user is instructed 
+          to add secrets to their GitHub repo containing details about the configuration and the AWS access keys for the created user.
+        </p>
+        
+        <p>
+          <img src="images/diagrams/laridae-workflow.png">
+        </p>
+
+        <h2 id="actions">13) Actions</h2>
+
+        <p>
+          Finally, we are in a position to discuss how the Laridae GitHub Actions work behind the scenes. As discussed above, Laridae offers two actions 
+          for separately performing Expand and Contract.
+        </p>
+
+        <p>The Expand action:</p>
+        
+        <ol>
+          <li>
+            <p>
+              Uses the AWS CLI to spin up a Fargate task, running a script to expand the user’s database. The task definition was created during the 
+              initialization step. The migration script is passed to the container as an environment variable.
+            </p>
+          </li>
+          <li>
+            <p>Polls the task using the AWS CLI until it attains the DETACHED state, indicating it has finished.</p>
+          </li>
+          <li>
+            <p>Updates the task definition of the app so that the environment variable containing the database URL references the post-migration schema.</p>
+            <p>
+              <img src="images/diagrams/actions-1.png">
+            </p>
+          </li>
+        </ol>
+        
+        <p>At this point, in our intended use case, the user’s existing pipeline:</p>
+        <ol start="4">
+          <li>
+            <p>
+              Redeploys their service and performs any other steps like automated testing. (alternatively, they can also use a simple deployment action 
+              we provide)
+            </p>
+            <p>
+              <img src="images/diagrams/actions-2.png">
+            </p>
+          </li>
+        </ol>
+
+        <p>The Contract action works similarly:</p>
+        <ol start="5">
+          <li>
+            <p>It waits for the user’s application service to finish deploying the new version of the code using an AWS CLI command (it polls the service until the desired number of jobs are running).</p>
+          </li>
+          <li>
+            <p>Spins up a Fargate task running Laridae to contract.</p>
+          </li>
+          <li>
+            <p>Polls the Fargate task until the contract is complete.</p>
+            <p>
+              <img src="images/diagrams/actions-3.png">
+            </p>
+          </li>
+        </ol>
+        
+        <h2 id="limitations-and-future-work">14) Limitations and Future Work</h2>
+
+        <p>Currently, to avoid additional complexity, Laridae imposes some restrictions on schema migrations:</p>
+
+        <ul>
+          <li>
+            <p>Only one schema change per migration.</p>
+          </li>
+          <li>
+            <p>Only one active migration per database.</p>
+          </li>
+          <li>
+            <p>There is no support for composite primary keys, as this makes batch backfill less efficient.</p>
+          </li>
+          <li>
+            <p>There is no support for advanced database features like existing triggers, materialized views, and foreign tables.</p>
+          </li>
+        </ul>
+        
+        <p>The Laridae GitHub action also comes with its own caveats:</p>
+        <ul>
+          <li>
+            <p>Restricted to applications fitting the Fargate - PostgreSQL - GitHub infrastructure.</p>
+          </li>
+          <li>
+            <p>The database connection string must be stored in the user’s Fargate task definition’s environment variable.</p>
+          </li>
+        </ul>
+        
+        <p>Going forward, in addition to relaxing the above limitations, there are several ways we hope to improve Laridae:</p>
+        <ul>
+          <li>
+            <p>Propagating default values and nullability when creating new versions of columns.</p>
+          </li>
+          <li>
+            <p>Allowing modification of columns with primary key constraints.</p>
+          </li>
+          <li>
+            <p>Adding support for more schema change operations.</p>
+          </li>
+        </ul>
+  
+        <h2 id="conclusion">15) Conclusion</h2>
+        <p>
+          Database schema migrations are a challenging process. However, with the right approach, the difficulty can be minimal. Laridae automates the 
+          Expand-and-Contract process to keep the complexity during a migration out of the code so developers can worry about new features rather than 
+          preserving compatibility. Laridae also helps remove risk from migrations by allowing rolling back to a functional state of data and code. It 
+          works with locks to avoid application downtime. Finally, this streamlined schema migration process can be synchronized with deployments in a 
+          CICD workflow.
+        </p>
+
+
+
+
+
+        <!-- <section id="footnotes">
           <h2 id="references">References</h2>
 
           <ol>
             <li id="footnote-1"></li>
           </ol>
-        </section>
+        </section> -->
       </section>
     </main>
 
@@ -170,7 +1388,7 @@
         <li class="individual">
           <img src="https://avatars.githubusercontent.com/MaiKhuu?v=4" alt="Mai Khuu" />
 
-          <h3>Mai Khuu</h3>
+          <h3>Mai<br>Khuu</h3>
 
           <p>Indianapolis, IN</p>
 
@@ -204,7 +1422,7 @@
         <li class="individual">
           <img src="https://avatars.githubusercontent.com/closetsolipsist?v=4" alt="James Thompson" />
 
-          <h3>James Thompson</h3>
+          <h3>James<br>Thompson</h3>
 
           <p>Carrboro, NC</p>
 
@@ -238,7 +1456,7 @@
         <li class="individual">
           <img src="https://avatars.githubusercontent.com/stephaniegmalek?v=4" alt="Stephanie McCollom" />
 
-          <h3>Stephanie McCollom</h3>
+          <h3>Stephanie<br>McCollom</h3>
 
           <p>Chicago, IL</p>
 

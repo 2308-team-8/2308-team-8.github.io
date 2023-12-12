@@ -26,10 +26,14 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   const snakeCaseify = (text) => text.toLowerCase().split(/ +/).join('-').replace(/\./g, '_');
+
+  let topNavVisible = false;
+  let smallNavVisible = false;
   const getScrollPosition = () => window.scrollY;
   let scrollPosition = getScrollPosition();
   const getWindowHeight = () => window.innerHeight;
   const getWindowWidth = () => window.innerWidth;
+  const isNarrowScreen = () => getWindowWidth() < 1100;
 
   let lastH2Id;
   const linkableHeaders = [...document.querySelectorAll('#case-study h2, #case-study h3, #our-team h1')].map((el) => {
@@ -124,30 +128,55 @@ document.addEventListener('DOMContentLoaded', () => {
     // if (narrowScreen) document.body.style.backgroundColor = '#282828';
     $(nav).slideDown('fast');
 
-  
-    lines.forEach(line => {
-      line.style.backgroundColor = '#284389';
-    });
   };
 
   const hideNav = () => {
-    // smallNavVisible = false;
+    smallNavVisible = false;
     topNavVisible = false;
     // handleNavColors();
     $(nav).slideUp('fast');
-    // showSite();
-    lines.forEach(line => {
-      line.style.backgroundColor = '#ffffff';
-    });
+    showSite();
+  };
+
+  const showSite = () => {
+    const siteElements = [header, main, ourTeam, document.body];
+    // remove "display = 'none'" set when small nav was displayed
+    siteElements.forEach((el) => el.removeAttribute('style'));
+  };
+
+  const hideSite = () => {
+    header.style.display = 'none';
+    main.style.display = 'none';
+    ourTeam.style.display = 'none';
+  };
+
+  // const hideNav = () => {
+  //   smallNavVisible = false;
+  //   topNavVisible = false;
+  //   handleNavColors();
+  //   $(nav).slideUp('fast');
+  //   showSite();
+  // };
+
+  const toggleNav = () => {
+    console.log(smallNavVisible);
+    if (smallNavVisible) {
+      hideNav();
+      window.scrollTo(0, scrollPosition);
+    } else {
+      showNav();
+      smallNavVisible = true;
+      hideSite();
+    }
   };
 
   const handleNavDisplay = () => {
     console.log("hi")
-    // if (isNarrowScreen()) {
-    //   toggleNav();
-    // } else {
+    if (isNarrowScreen()) {
+      toggleNav();
+    } else {
       showNav();
-    // }
+    }
   };
 
   const handleCaseStudyNavStyles = () => {
@@ -217,13 +246,13 @@ document.addEventListener('DOMContentLoaded', () => {
       $toTop.stop(true, true).css('display', 'none');
     }
 
-    // if (getWindowHeight() < 500) {
-    //   $toTop.stop(true, true).css('display', 'none');
-    // } else if (withinCaseStudy) {
-    //   $toTop.fadeIn(800);
-    // } else {
-    //   $toTop.stop(true, true).css('display', 'none');
-    // }
+    if (getWindowHeight() < 500) {
+      $toTop.stop(true, true).css('display', 'none');
+    } else if (withinCaseStudy) {
+      $toTop.fadeIn(800);
+    } else {
+      $toTop.stop(true, true).css('display', 'none');
+    }
   };
 
   function onScroll(event) {
@@ -251,6 +280,7 @@ document.addEventListener('DOMContentLoaded', () => {
   homeLink.addEventListener('click', hideNav);
   caseStudyLink.addEventListener('click', hideNav);
   ourTeamLink.addEventListener('click', hideNav);
+  mobileCaseStudyLinks.forEach((link) => link.addEventListener('click', hideNav));
 
 
   caseStudyNav.addEventListener('click', (e) => {
@@ -267,5 +297,15 @@ document.addEventListener('DOMContentLoaded', () => {
     onScroll();
     handleCaseStudyNav();
   });
+
+  // window.addEventListener('resize', () => {
+  //   handleCaseStudyNav();
+  //   // handleNavColors();
+  //   if (!isNarrowScreen() && smallNavVisible) {
+  //     showSite();
+  //     hideNav();
+  //     window.scrollTo(0, scrollPosition);
+  //   }
+  // });
 });
 
