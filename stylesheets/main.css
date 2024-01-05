@@ -162,7 +162,7 @@ nav#site-navigation a {
 ------------------------------------ */
 
 header {
-  height: 500px;
+  height: 1100px;
   background: #284389;
 }
 
@@ -174,14 +174,13 @@ header h1 {
 
 header p {
   color: #ffffff;
-  font-size: 1.5rem;
+  font-size: 2.5rem;
   font-weight: 200;
   /* letter-spacing: 0.1rem; */
   left: 50%;
   position: absolute;
   text-align: center;
   transform: translateY(-50%) translateX(-50%);
-  height: 50%;
   width: 750px;
   margin-top: 75px;
   margin-bottom: 75px;
@@ -191,8 +190,7 @@ header p {
 header h1 img {
   display: block;
   width: 60%;
-  max-width: 40%;
-  /* height: 60%; */
+  max-width: 800px;
   margin: 0 auto;
 }
 
@@ -204,7 +202,6 @@ header h1 img {
 
 #demo {
   /* padding-top: 50px; */
-  display: block;
   padding-bottom: 100px;
   background-color: #284389;
 }
